@@ -1,6 +1,7 @@
 import scrapy 
 
 class Books(scrapy.Spider):
+    NEXT_PAGE_PATTERN = '//ul[@class="pager"]//a[starts-with(text(), "next")]/@href'
     LINKS_BOOK_PATTERN = '//article[@class="product_pod"]//h3/a/@href'
     CATEGORY_PATTERN = '//ul[@class="breadcrumb"]/li[3]/a/text()'
     BOOK_TITLE_PATTERN = '//article[@class="product_page"]//h1/text()'
@@ -24,9 +25,13 @@ class Books(scrapy.Spider):
         links_to_books = response.xpath(self.LINKS_BOOK_PATTERN).getall()
 
         for link in links_to_books:
-            yield response.follow(link, callback=self.parse_link_books, cb_kwargs={'url': response.urljoin(link)})
+            yield response.follow(link, callback=self.parse_book_content, cb_kwargs={'url': response.urljoin(link)})
     
-    def parse_link_books(self, response, **kwargs):
+        next_page_link = response.xpath(self.NEXT_PAGE_PATTERN).get()
+        if next_page_link:
+            yield response.follow(next_page_link, callback=self.parse)
+
+    def parse_book_content(self, response, **kwargs):
         link = kwargs['url']
         category = response.xpath(self.CATEGORY_PATTERN).get()
         book_title = response.xpath(self.BOOK_TITLE_PATTERN).get()
